@@ -25,3 +25,4 @@ __pycache__/
 *.pyzw316
 *.pyzw317
 novel_output/
+*.ttf
