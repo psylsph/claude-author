@@ -26,3 +26,4 @@ __pycache__/
 *.pyzw317
 novel_output/
 *.ttf
+_previous_runs
