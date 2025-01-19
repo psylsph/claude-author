@@ -16,7 +16,7 @@ import os
 
 words_per_chapter = 3000
 num_chapters = 15
-outline_only = True
+outline_only = False
 
 def initialize_characters(self, premise: str):
     """Extract and initialize characters from the premise."""
@@ -797,32 +797,36 @@ def main():
     premise = open("ideas/unit985.md", "r", encoding="UTF-8").read()
     
     novel = novel_writer.write_novel(premise, num_chapters)
-    # Save the complete novel
-    with open("novel_output/final_novel.json", "w", encoding="UTF-8") as f:
-        json.dump(novel, f, indent=2, separators=(',', ': '))
 
-    # Create a readable text version
-    with open("novel_output/final_novel.txt", "w", encoding="UTF-8") as f:
-        # Write premise and character information
-        f.write("Novel Premise:\n")
-        f.write("=" * 50 + "\n")
-        f.write(novel["metadata"]["premise"] + "\n\n")
+    if not outline_only:
+        # Save the complete novel
+        with open("novel_output/final_novel.json", "w", encoding="UTF-8") as f:
+            json.dump(novel, f, indent=2, separators=(',', ': '))
 
-        f.write("Characters:\n")
-        f.write("=" * 50 + "\n")
-        for char in novel["characters"]["characters"].values():
-            f.write(f"\n{char['name']}:\n")
-            f.write(f"Role: {char['role']}\n")
-            f.write(f"Description: {char['description']}\n")
-            f.write(f"Key Traits: {', '.join(char['key_traits'])}\n")
-            f.write("\n")
-        for chapter_num in range(1, num_chapters + 1):
-            chapter_key = f"Chapter_{chapter_num}"
-            if "Chapter" not in novel[chapter_key]["final_version"]:
-                f.write(f"\nChapter {chapter_num}\n")
-            f.write("=" * 50 + "\n\n")
-            f.write(novel[chapter_key]["final_version"])
-            f.write("\n\n")
+        # Create a readable text version
+        with open("novel_output/final_novel.txt", "w", encoding="UTF-8") as f:
+            # Write premise and character information
+            f.write("Novel Premise:\n")
+            f.write("=" * 50 + "\n")
+            f.write(novel["metadata"]["premise"] + "\n\n")
+
+            f.write("Characters:\n")
+            f.write("=" * 50 + "\n")
+            for char in novel["characters"]["characters"].values():
+                f.write(f"\n{char['name']}:\n")
+                f.write(f"Role: {char['role']}\n")
+                f.write(f"Description: {char['description']}\n")
+                f.write(f"Key Traits: {', '.join(char['key_traits'])}\n")
+                f.write("\n")
+            for chapter_num in range(1, num_chapters + 1):
+                chapter_key = f"Chapter_{chapter_num}"
+                if "Chapter" not in novel[chapter_key]["final_version"]:
+                    f.write(f"\nChapter {chapter_num}\n")
+                f.write("=" * 50 + "\n\n")
+                f.write(novel[chapter_key]["final_version"])
+                f.write("\n\n")
+    else:
+        print("Outline-only mode enabled. No novel content generated.")
 
 if __name__ == "__main__":
     main()
