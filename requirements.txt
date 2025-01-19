@@ -4,3 +4,5 @@ flaml[automl]
 python_dotenv
 reportlab
 json-repair
+scikit-learn
+nltk
