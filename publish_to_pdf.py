@@ -93,6 +93,15 @@ def clean_text(text):
     
     # Strip whitespace from the beginning and end
     text = text.strip()
+
+    # remove the double **
+    text = text.replace("**", "")
+
+    # remove TERMINATE
+    text = text.replace("TERMINATE", "")
+
+    # remove random =
+    text = text.replace("=", "")
     
     return text
 
@@ -207,7 +216,8 @@ def process_novel_to_pdf(input_text, output_filename='novel.pdf', title='My Nove
 
 
 if __name__ == "__main__":
+    title = input("Title:")
     text = open("novel_output/final_novel.txt", "r", encoding='utf-8').read()
     text.replace("TERMINATE", "")
     text.replace("**", "")
-    process_novel_to_pdf(text, 'novel_output/final_novel.pdf', 'Unit 985')
+    process_novel_to_pdf(text, 'novel_output/final_novel.pdf', title)

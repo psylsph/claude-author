@@ -3,6 +3,7 @@ from typing import List, Dict
 import json
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from json_repair import json_repair
 
 from config import get_config
 import re
@@ -108,6 +109,11 @@ class CharacterManager:
         self.mentions = {}  # Track character mentions by chapter
         
     def add_character(self, character: Character):
+        try:
+            int(character.first_appearance)
+        except ValueError:
+            character.first_appearance = 0
+            character.last_appearance = 0
         self.characters[character.name.lower()] = character
         
     def get_character(self, name: str) -> Character:
@@ -252,27 +258,36 @@ Be thorough and specific in maintaining character consistency.""",
             # Extract JSON from code blocks
             json_match = re.search(r'```json(.*?)```', response, re.DOTALL)
             if json_match:
-                try:
-                    characters = json.loads(json_match.group(1).strip())
-                    for char_data in characters:
-                        # Add last_appearance field (will be updated as the story progresses)
-                        char_data['last_appearance'] = char_data['first_appearance']
-                        
-                        # Create and add the character
-                        if char_data['name']:  # Only add if we have at least a name
-                            try:
-                                character = Character(**char_data)
-                                self.character_manager.add_character(character)
-                                print(f"Added character: {char_data['name']}")
-                            except Exception as e:
-                                print(f"Error creating character {char_data['name']}: {e}")
-                except json.JSONDecodeError as e:
-                    print(f"Error parsing JSON character data: {e}")
-                    print("Response was:", response)
+                striped_json = json_match.group(1).strip()
+            else:
+                striped_json = response
+
+            
+            striped_json = striped_json.replace("\n", "")
+            striped_json = striped_json.replace("TERMINATE", "")
+            try:
+                characters = json_repair.loads(striped_json)
+                for char_data in characters:
+                    # Add last_appearance field (will be updated as the story progresses)
+                    char_data['last_appearance'] = char_data['first_appearance']
+                    
+                    # Create and add the character
+                    if char_data['name']:  # Only add if we have at least a name
+                        try:
+                            character = Character(**char_data)
+                            self.character_manager.add_character(character)
+                            print(f"Added character: {char_data['name']}")
+                        except Exception as e:
+                            print(f"Error creating character {char_data['name']}: {e}")
+            except json.JSONDecodeError as e:
+                print(f"Error parsing JSON character data: {e}")
+                print("Response was:", response)
+                exit (1)
                 
         except Exception as e:
             print(f"Error parsing character data: {e}")
             print("Response was:", response)
+            exit (1)
 
     def get_character_context(self, chapter_num: int) -> str:
         """Get current character context for the chapter."""
