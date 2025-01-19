@@ -555,6 +555,8 @@ End with TERMINATE"""
 
         if chapter_num == num_chapters:
             extra_instructions = "This is the final chapter. Ensure a satisfying conclusion."
+        else:
+            extra_instructions = ""
 
         for attempt in range(max_attempts):
             # Generate initial outline
