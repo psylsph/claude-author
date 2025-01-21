@@ -9,7 +9,7 @@ def get_config(local_url: str = "http://192.168.1.5:1234/v1") -> Dict:
     
     # Basic config for local LLM
     config_list = [{
-        'model': 'mistral-nemo-instruct-2407',
+        'model': 'synatra-7b-v0.3-rp@q8_0',
         'base_url': local_url,
         #'api_type': 'ollama', # disable for lm studio
         'api_key': 'not-needed',
@@ -27,5 +27,6 @@ def get_config(local_url: str = "http://192.168.1.5:1234/v1") -> Dict:
         "timeout": 600,
         "cache_seed": None
     }
+
     
     return agent_config

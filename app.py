@@ -14,161 +14,9 @@ from config import get_config
 import re
 import os
 
-words_per_chapter = 3000
-num_chapters = 15
-outline_only = False
-
-def initialize_characters(self, premise: str):
-    """Extract and initialize characters from the premise."""
-    character_file = "novel_output/characters.json"
-
-    # Check if the character file already exists
-    if os.path.exists(character_file):
-        with open(character_file, "r") as f:
-            characters_data = json.load(f)
-            self.character_manager.from_dict(characters_data)
-            print("Characters loaded from existing file.")
-            return
-
-    chat_manager = autogen.GroupChat(
-        agents=[self.user_proxy, self.character_agent],
-        messages=[],
-        max_round=3,
-        speaker_selection_method="round_robin",
-        allow_repeat_speaker=False
-    )
-
-    manager = autogen.GroupChatManager(groupchat=chat_manager)
-
-    # Use string formatting to safely insert premise
-    prompt = """Based on this premise: '{}'
-
-    Create detailed character profiles in JSON format for each character. The response should be a JSON array where each character is an object with these fields:
-    - name: string
-    - role: string
-    - description: string
-    - personality: string
-    - relationships: object mapping character names to relationship descriptions
-    - key_traits: array of strings
-    - first_appearance: string (chapter number)
-    - story_arc: string
-
-    Example format:
-    ```json
-    [
-        {
-            "name": "John Doe",
-            "role": "Protagonist",
-            "description": "A tall man with brown hair...",
-            "personality": "Brave but reckless...",
-            "relationships": {
-                "Jane Smith": "Love interest",
-                "Bob Johnson": "Best friend"
-            },
-            "key_traits": ["courageous", "stubborn", "loyal"],
-            "first_appearance": "1",
-            "story_arc": "Grows from reckless youth to responsible leader"
-        }
-    ]
-    ```
-
-    Create profiles for all major and significant supporting characters.
-    End with TERMINATE""".format(premise)
-
-    self.user_proxy.initiate_chat(
-        manager,
-        message=prompt
-    )
-
-    # Parse the character profiles from the response
-    try:
-        response = chat_manager.messages[1]["content"]
-
-        # Extract JSON from code blocks
-        json_match = re.search(r'```json(.*?)```', response, re.DOTALL)
-        if json_match:
-            striped_json = json_match.group(1).strip()
-        else:
-            striped_json = response
-
-        striped_json = striped_json.replace("\n", "")
-        striped_json = striped_json.replace("TERMINATE", "")
-        try:
-            characters = json_repair.loads(striped_json)
-            for char_data in characters:
-                # Add last_appearance field (will be updated as the story progresses)
-                char_data['last_appearance'] = char_data['first_appearance']
-
-                # Create and add the character
-                if char_data['name']:  # Only add if we have at least a name
-                    try:
-                        character = Character(**char_data)
-                        self.character_manager.add_character(character)
-                        print(f"Added character: {char_data['name']}")
-                    except Exception as e:
-                        print(f"Error creating character {char_data['name']}: {e}")
-        except json.JSONDecodeError as e:
-            print(f"Error parsing JSON character data: {e}")
-            print("Response was:", response)
-            exit(1)
-
-    except Exception as e:
-        print(f"Error parsing character data: {e}")
-        print("Response was:", response)
-        exit(1)
-
-    # Save the characters to a file
-    with open(character_file, "w") as f:
-        json.dump(self.character_manager.to_dict(), f, indent=2, separators=(',', ': '))
-        f.flush()
-
-def write_novel(self, premise: str, num_chapters: int) -> Dict[str, str]:
-    """Generate a complete novel based on the premise and number of chapters."""
-    self.initialize_characters(premise)
-
-    novel = {
-        "metadata": {
-            "premise": premise,
-            "created_date": datetime.now().isoformat(),
-            "num_chapters": num_chapters
-        },
-        "characters": self.character_manager.to_dict(),
-        "chapters": {}
-    }
-
-    for chapter_num in range(1, num_chapters + 1):
-        print(f"\nWorking on Chapter {chapter_num}...")
-
-        # Check if the outline already exists
-        outline_file = f"novel_output/outline_chapter_{chapter_num}.txt"
-        if os.path.exists(outline_file):
-            with open(outline_file, "r") as f:
-                outline = f.read()
-        else:
-            # Generate chapter outline
-            outline = self.generate_chapter_outline(premise, chapter_num)
-
-        # Write chapter with revisions
-        chapter_versions = self.write_chapter_with_revisions(outline, chapter_num)
-
-        # Store chapter and its metadata
-        novel[f"Chapter_{chapter_num}"] = {
-            "outline": outline,
-            "versions": chapter_versions,
-            # Use the last revision as the final version
-            "final_version": chapter_versions[f"revision_{len(chapter_versions)}"]["content"]
-        }
-
-        # Update character tracking data
-        novel["characters"] = self.character_manager.to_dict()
-
-        # Save progress after each chapter
-        with open(f"novel_output/novel_progress.json", "w") as f:
-            json.dump(novel, f, indent=2, separators=(',', ': '))
-            f.flush()
-
-    return novel
-
+words_per_chapter = 4000
+num_chapters = 7
+outline_only = True
 
 class OutlineReviewer:
     def __init__(self):
@@ -450,12 +298,16 @@ Be thorough and specific in maintaining character consistency.""",
                 striped_json = response
     
             striped_json = striped_json.replace("\n", "")
+            striped_json = striped_json.replace("<0x0A>", "") # erm binary new line returned from some models
             striped_json = striped_json.replace("TERMINATE", "")
             try:
                 characters = json_repair.loads(striped_json)
                 for char_data in characters:
                     # Add last_appearance field (will be updated as the story progresses)
                     char_data['last_appearance'] = char_data['first_appearance']
+                    # erm some models can't spell
+                    if 'descripton' in char_data:
+                        char_data['description'] = char_data['descripton']
     
                     # Create and add the character
                     if char_data['name']:  # Only add if we have at least a name
@@ -794,7 +646,7 @@ def main():
     os.makedirs("novel_output", exist_ok=True)
     # Example usage
     novel_writer = NovelWriter(max_revisions=3)
-    premise = open("ideas/unit985.md", "r", encoding="UTF-8").read()
+    premise = open("ideas/foursome.md", "r", encoding="UTF-8").read()
     
     novel = novel_writer.write_novel(premise, num_chapters)
 
